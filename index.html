@@ -1,193 +1,128 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Inventory Demand Forecasting</title>
-  <link rel="stylesheet" href="style.css" />
-  <!-- Google Font -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <!-- TensorFlow.js -->
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js"></script>
-  <!-- Optional data.js (supports: const dataset=[...] or window.INVENTORY_DATA=[...] ) -->
-  <script src="data.js" defer></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory Demand Forecasting</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
 </head>
 <body>
-  <header class="hero">
-    <div class="hero-inner">
-      <h1>📦 Inventory Demand Forecasting</h1>
-      <p>Upload your dataset, explore insights, train a GRU/LSTM model in-browser, then forecast & evaluate.</p>
+    <div class="container">
+        <header>
+            <h1>Inventory Demand Forecasting</h1>
+            <p>Analyze and forecast product demand using machine learning</p>
+        </header>
+
+        <div class="app-container">
+            <!-- Data Loading Section -->
+            <section id="data-loading" class="section">
+                <h2>1. Load Dataset</h2>
+                <div class="card">
+                    <div class="input-group">
+                        <label for="file-input">Upload CSV File:</label>
+                        <input type="file" id="file-input" accept=".csv">
+                    </div>
+                    <div class="button-group">
+                        <button id="load-sample-btn" class="btn">Use Sample Data</button>
+                    </div>
+                    <div id="data-info" class="data-info hidden">
+                        <p><strong>Dataset Info:</strong> <span id="row-count">0</span> rows, <span id="col-count">0</span> columns loaded</p>
+                        <div id="data-preview" class="data-preview"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- EDA Section -->
+            <section id="eda" class="section">
+                <h2>2. Exploratory Data Analysis</h2>
+                <div class="card">
+                    <button id="show-eda-btn" class="btn" disabled>Show EDA</button>
+                    <div id="eda-content" class="eda-content hidden">
+                        <div class="summary-stats">
+                            <h3>Summary Statistics</h3>
+                            <div id="summary-table"></div>
+                        </div>
+                        <div class="charts">
+                            <div class="chart-container">
+                                <h3>Sales by Category</h3>
+                                <canvas id="category-chart"></canvas>
+                            </div>
+                            <div class="chart-container">
+                                <h3>Sales by Region</h3>
+                                <canvas id="region-chart"></canvas>
+                            </div>
+                            <div class="chart-container">
+                                <h3>Inventory vs Demand</h3>
+                                <canvas id="inventory-chart"></canvas>
+                            </div>
+                            <div class="chart-container">
+                                <h3>Seasonality Analysis</h3>
+                                <canvas id="seasonality-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Model Training Section -->
+            <section id="model-training" class="section">
+                <h2>3. Model Training</h2>
+                <div class="card">
+                    <div class="input-group">
+                        <label for="model-select">Select Model:</label>
+                        <select id="model-select">
+                            <option value="lstm">LSTM</option>
+                            <option value="gru">GRU</option>
+                        </select>
+                    </div>
+                    <div class="training-controls">
+                        <button id="train-btn" class="btn" disabled>Start Training</button>
+                        <button id="stop-btn" class="btn btn-secondary" disabled>Stop Training</button>
+                    </div>
+                    <div id="training-progress" class="training-progress hidden">
+                        <h3>Training Progress</h3>
+                        <div class="progress-bar">
+                            <div id="progress-fill" class="progress-fill"></div>
+                        </div>
+                        <p id="epoch-info">Epoch: 0/50</p>
+                        <div class="training-charts">
+                            <div class="chart-container">
+                                <h4>Training Loss</h4>
+                                <canvas id="loss-chart"></canvas>
+                            </div>
+                            <div class="chart-container">
+                                <h4>Validation Loss</h4>
+                                <canvas id="val-loss-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Prediction Section -->
+            <section id="prediction" class="section">
+                <h2>4. Prediction & Evaluation</h2>
+                <div class="card">
+                    <button id="predict-btn" class="btn" disabled>Generate Predictions</button>
+                    <div id="prediction-results" class="prediction-results hidden">
+                        <div class="evaluation-metrics">
+                            <h3>Model Evaluation</h3>
+                            <div id="metrics-table"></div>
+                        </div>
+                        <div class="prediction-charts">
+                            <div class="chart-container">
+                                <h3>Actual vs Predicted Demand</h3>
+                                <canvas id="prediction-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
     </div>
-    <div class="stepper" id="stepper">
-      <div class="step active"><span>1</span><b>Select Data</b></div>
-      <div class="divider"></div>
-      <div class="step"><span>2</span><b>EDA</b></div>
-      <div class="divider"></div>
-      <div class="step"><span>3</span><b>Model & Train</b></div>
-      <div class="divider"></div>
-      <div class="step"><span>4</span><b>Forecast & Evaluate</b></div>
-    </div>
-  </header>
 
-  <main class="container">
-    <!-- Step 1: Dataset -->
-    <section class="card" id="cardData">
-      <div class="card-head">
-        <h2>Step 1 — Select Dataset</h2>
-        <span class="badge">Required</span>
-      </div>
-      <div class="row">
-        <div class="col">
-          <label class="lbl">Choose file (CSV/JSON). Or load from data.js if present.</label>
-          <div class="filebox">
-            <input id="fileInput" type="file" accept=".csv,.json" />
-            <button id="btnLoad" class="btn">Load Dataset</button>
-            <button id="btnLoadDataJS" class="btn ghost">Load data.js</button>
-            <button id="btnDemo" class="btn ghost">Use Demo Data</button>
-          </div>
-
-          <div class="grid3">
-            <label>Date Column
-              <select id="dateCol"></select>
-            </label>
-            <label>Target Column
-              <select id="targetCol"></select>
-            </label>
-            <label>Aggregate by Date
-              <select id="aggFunc">
-                <option value="sum">Sum</option>
-                <option value="mean">Mean</option>
-                <option value="last">Last</option>
-              </select>
-            </label>
-          </div>
-
-          <div class="grid3">
-            <label>Store
-              <select id="storeFilter"><option value="__ALL__">All</option></select>
-            </label>
-            <label>Product
-              <select id="productFilter"><option value="__ALL__">All</option></select>
-            </label>
-            <label>Region
-              <select id="regionFilter"><option value="__ALL__">All</option></select>
-            </label>
-          </div>
-
-          <div id="dataSummary" class="summary"></div>
-        </div>
-      </div>
-      <div id="tableMount"></div>
-    </section>
-
-    <!-- Step 2: EDA -->
-    <section class="card disabled" id="cardEDA">
-      <div class="card-head">
-        <h2>Step 2 — Explore Data (EDA)</h2>
-        <span class="badge">4 top plots</span>
-      </div>
-      <div class="row">
-        <div class="col controls">
-          <label>Rolling Window
-            <input id="rollingWindow" type="number" min="3" max="60" step="1" value="7"/>
-          </label>
-          <button id="btnEDA" class="btn" disabled>Show EDA</button>
-        </div>
-      </div>
-
-      <div class="grid2">
-        <div class="plot"><canvas id="tsChart"></canvas></div>
-        <div class="plot"><canvas id="histChart"></canvas></div>
-        <div class="plot"><canvas id="dowChart"></canvas></div>
-        <div class="plot"><canvas id="acfChart"></canvas></div>
-      </div>
-    </section>
-
-    <!-- Step 3: Model -->
-    <section class="card disabled" id="cardModel">
-      <div class="card-head">
-        <h2>Step 3 — Select Model & Train</h2>
-        <span class="badge">Live training</span>
-      </div>
-      <div class="row">
-        <div class="col controls grid6">
-          <label>Model Type
-            <select id="modelType">
-              <option value="GRU">GRU</option>
-              <option value="LSTM">LSTM</option>
-            </select>
-          </label>
-          <label>Sequence Length
-            <input id="seqLen" type="number" min="5" max="180" step="1" value="28"/>
-          </label>
-          <label>Units
-            <input id="units" type="number" min="8" max="256" step="8" value="64"/>
-          </label>
-          <label>Dropout
-            <input id="dropout" type="number" min="0" max="0.8" step="0.05" value="0.2"/>
-          </label>
-          <label>Epochs
-            <input id="epochs" type="number" min="5" max="200" step="1" value="30"/>
-          </label>
-          <label>Batch Size
-            <input id="batch" type="number" min="8" max="512" step="8" value="64"/>
-          </label>
-        </div>
-      </div>
-      <div class="row">
-        <div class="col controls">
-          <button id="btnTrain" class="btn" disabled>Train Model</button>
-          <div id="spinner" class="spinner hidden"></div>
-          <span class="hint">Chronological split 80/20 • Loss=MSE • Optimizer=Adam</span>
-        </div>
-      </div>
-      <div class="plot tall"><canvas id="lossChart"></canvas></div>
-    </section>
-
-    <!-- Step 4: Forecast & Evaluate -->
-    <section class="card disabled" id="cardForecast">
-      <div class="card-head">
-        <h2>Step 4 — Forecast & Evaluate</h2>
-        <span class="badge">Metrics</span>
-      </div>
-      <div class="row">
-        <div class="col controls">
-          <label>Forecast Horizon
-            <input id="horizon" type="number" min="1" max="180" step="1" value="14"/>
-          </label>
-          <button id="btnPredict" class="btn" disabled>Forecast</button>
-          <button id="btnEvaluate" class="btn ghost" disabled>Evaluate (Test)</button>
-        </div>
-      </div>
-      <div class="grid2">
-        <div class="plot tall"><canvas id="predChart"></canvas></div>
-        <div class="metrics" id="metrics">
-          <div class="kpi"><span>R² (accuracy-like)</span><b id="kpiR2">—</b></div>
-          <div class="kpi"><span>MAE</span><b id="kpiMAE">—</b></div>
-          <div class="kpi"><span>RMSE</span><b id="kpiRMSE">—</b></div>
-          <div class="kpi"><span>MAPE</span><b id="kpiMAPE">—</b></div>
-          <div class="kpi"><span>sMAPE</span><b id="kpiSMAPE">—</b></div>
-        </div>
-      </div>
-    </section>
-
-    <section class="card">
-      <div class="card-head">
-        <h2>Logs</h2>
-        <span class="badge">Console</span>
-      </div>
-      <div id="log" class="log"></div>
-    </section>
-  </main>
-
-  <footer class="foot">
-    <p>Built with <b>TensorFlow.js</b> + <b>Chart.js</b> • Optimized for GitHub Pages</p>
-  </footer>
-
-  <script src="script.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
